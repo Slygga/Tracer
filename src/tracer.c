@@ -5,7 +5,7 @@
 int main(int argc, char **argv)
 {
 	WINDOW *window = initwin();
-	struct dictionary *dictionary = dictionary_load("data", 3000);
+	struct dictionary *dictionary = dictionary_load("easy_dictionary", 500);
 	struct race *race;
 	char results[500];
 
@@ -78,6 +78,11 @@ struct race *race_generate(struct dictionary *dictionary, int length)
 
 	for (int i = 0, p = 0; i < length; i++) {
 		p = rand() % dictionary->size;
+
+		if (dictionary->data[p] == NULL) {
+			i--;
+			continue;
+		}
 
 		addstr(dictionary->data[p]);
 		addch(' ');
