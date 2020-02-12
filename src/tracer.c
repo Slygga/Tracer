@@ -10,7 +10,6 @@ int main(int argc, char **argv)
 	char results[500];
 
 	do {
-		erase();
 		addstr("Press any key to start racing...");
 		getch();
 		erase();
@@ -35,7 +34,7 @@ int main(int argc, char **argv)
 		addstr(results);
 
 		free(race);
-		addstr("\nWant to go again? (y|n)");
+		addstr("\nWant to go again? (y|n)\n\n");
 	} while (getch() == 'y');
 
 	dictionary_close(dictionary);
