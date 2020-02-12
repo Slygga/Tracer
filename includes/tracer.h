@@ -31,6 +31,6 @@ struct race {
 WINDOW *initwin();
 struct race *race_generate(struct dictionary *dictionary, int length);
 void race_start(struct race *race);
-
+void race_input_handle(int *y, int *x, struct race *race, int input, int expected);
 
 #endif

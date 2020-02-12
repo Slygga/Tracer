@@ -5,10 +5,12 @@
 
 struct dictionary {
 	char **data;
-	size_t size;
+	size_t words;
+	size_t characters;
 };
 
-struct dictionary *dictionary_load(const char *file, size_t size);
+struct dictionary *dictionary_load(const char *file);
+int dictionary_get_info(int file, struct dictionary *dictionary);
 void dictionary_close(struct dictionary *dictionary);
 
 #endif

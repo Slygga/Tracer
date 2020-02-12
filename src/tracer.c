@@ -1,11 +1,12 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "tracer.h"
 
 int main(int argc, char **argv)
 {
 	WINDOW *window = initwin();
-	struct dictionary *dictionary = dictionary_load("easy_dictionary", 500);
+	struct dictionary *dictionary = dictionary_load("easy_dictionary");
 	struct race *race;
 	char results[500];
 
@@ -65,6 +66,7 @@ WINDOW *initwin()
 
 struct race *race_generate(struct dictionary *dictionary, int length)
 {
+	int current_x, current_y, max_x, max_y;
 	struct race *race = malloc(sizeof(*race));
 	race->words = 0;
 	race->length = length;
@@ -76,16 +78,23 @@ struct race *race_generate(struct dictionary *dictionary, int length)
 
 	attron(COLOR_PAIR(INACTIVE_COLOR));
 
-	for (int i = 0, p = 0; i < length; i++) {
-		p = rand() % dictionary->size;
+	getmaxyx(stdscr, max_y, max_x);
 
-		if (dictionary->data[p] == NULL) {
-			i--;
-			continue;
+	for (int length_count = 0, random_position = 0; length_count < length; length_count++) {
+		getyx(stdscr, current_y, current_x);
+
+		random_position = rand() % dictionary->words;
+
+		if (strlen(dictionary->data[random_position]) + current_x + 1 > max_x) {
+			current_x = 0;
+			current_y++;
+			move(current_y, current_x);
 		}
 
-		addstr(dictionary->data[p]);
-		addch(' ');
+		if (current_x != 0)
+			addch(' ');
+
+		addstr(dictionary->data[random_position]);
 
 		srand(time(&t) * rand());
 	}
@@ -100,52 +109,73 @@ struct race *race_generate(struct dictionary *dictionary, int length)
 
 void race_start(struct race *race)
 {
-	int input,
-		expected,
-		current_x,
-		current_y,
-		max_x,
-		max_y,
-		color;
+	int input, expected, x, y, max_x, max_y;
 	time_t start, end;
+
+	getmaxyx(stdscr, max_y, max_x);
 
 	time(&start);
 
 	while ((input = getch()) != 27) { // Escape key
-		getmaxyx(stdscr, max_y, max_x);
-		getyx(stdscr, current_y, current_x);
+		getyx(stdscr, y, x);
 
 		expected = inch() & A_CHARTEXT;
 
-		if (input == ' ') {
-			race->words++;
-		} else if (input == 8 || input == 127) { // Backspace or delete
-			current_x -= 2;
-		} else if (input == expected) {
-			color = VALID_COLOR;
-			race->correct_characters++;
-		} else {
-			color = INVALID_COLOR;
-			race->incorrect_characters++;
-		}
-
-		chgat(1, 0, color, NULL);
-
-		if (current_x + 1 >= max_x) {
-			current_x = 0;
-			current_y++;
-		} else {
-			current_x++;
-		}
+		race_input_handle(&y, &x, race, input, expected);
 		
-		if (current_x >= race->end_x && current_y >= race->end_y)
+		if (x >= race->end_x && y >= race->end_y)
 			break;
 
-		move(current_y, current_x);
+		if (x > max_x) {
+			x = 0;
+			y++;
+		}
+
+		move(y, x);
 	}
 
 	time(&end);
 
 	race->start_time = start;
 	race->end_time = end;
+}
+
+void race_input_handle(int *y, int *x, struct race *race, int input, int expected)
+{
+	int color = INVALID_COLOR, next_character;
+
+	next_character = mvinch(*y, *x + 1);
+	move(*y, *x);
+
+	if (input == ' ') {
+		if (input == expected && next_character == ' ' || next_character == ERR) {
+			*x = 0;
+			(*y)++;
+
+			chgat(1, 0, color, NULL);
+
+			return;
+		}
+
+		if (input == expected)
+			race->correct_characters++;
+		else
+			race->incorrect_characters++;
+
+		race->words++;
+	} else if (input == 8 || input == 127) { // Backspace or Delete respectively
+		(*x)--;
+
+		return;
+	} else if (input == expected) {
+		color = VALID_COLOR;
+		race->correct_characters++;
+	} else {
+		color = INVALID_COLOR;
+		race->incorrect_characters++;
+	}
+
+	chgat(1, 0, color, NULL);
+
+	(*x)++;
 }

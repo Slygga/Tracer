@@ -1,59 +1,62 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 #include "dictionary.h"
 
-struct dictionary *dictionary_load(const char *file_name, size_t size)
+struct dictionary *dictionary_load(const char *file_name)
 {
-	FILE *file = fopen(file_name, "r");
-	struct stat file_stats;
 	struct dictionary *dictionary = malloc(sizeof(*dictionary));
-	int i = 0, c = 0, ch;
+	int file = open(file_name, O_RDONLY);
+	int word_index = 0, character_index = 0;
+	char current_character;
+
+	if (file == -1) {
+		perror("Error opening file in dictionary_load");
+		free(dictionary);
+		return NULL;
+	}
+
+	dictionary_get_info(file, dictionary);
 	
-	if (file == NULL)
-		goto ERROR; 
+	dictionary->data = malloc(dictionary->words * sizeof(*(dictionary->data)));
+	memset(dictionary->data, '\0', dictionary->words);
 
-	if (fstat(fileno(file), &file_stats) == -1)
-		goto ERROR;
+	*(dictionary->data) = malloc(dictionary->characters);
+	memset(*(dictionary->data), '\0', dictionary->characters);
 
-	dictionary->data = malloc(size * sizeof(*(dictionary->data)));
-	memset(dictionary->data, '\0', size);
+	while (read(file, &current_character, 1)) {
+		if (current_character == '\n') {
+			dictionary->data[word_index][character_index] = '\0';
 
-	*(dictionary->data) = malloc(file_stats.st_size);
-	memset(*(dictionary->data), '\0', file_stats.st_size);
-	dictionary->size = size;
-
-	while ((ch = fgetc(file)) != EOF) {
-		if (ch == '\n') {
-			dictionary->data[i][c] = '\0';
-
-			if (i + 1 > dictionary->size) {
-				dictionary->data = realloc(
-						dictionary->data,
-						dictionary->size * 1.5 * sizeof(*(dictionary->data))
-				);
-				memset(dictionary->data + size, '\0', (size * 1.5) - size);
-				dictionary->size *= 1.5;
-			}
-
-			dictionary->data[i + 1] = &dictionary->data[i][c + 1];
-			c = 0;
-			i++;
+			dictionary->data[word_index + 1] = &dictionary->data[word_index][character_index + 1];
+			character_index = 0;
+			word_index++;
 		} else {
-			dictionary->data[i][c++] = ch;
+			dictionary->data[word_index][character_index++] = current_character;
 		}
 	}
 
-	fclose(file);
+	close(file);
 	return dictionary;
+}
 
-ERROR:
-	perror("Error loading dictionary");
-	fclose(file);
-	free(dictionary);
-	return NULL;
+int dictionary_get_info(int file, struct dictionary *dictionary)
+{
+	char current_character;
+
+	while (read(file, &current_character, 1)) {
+		if (current_character == ' ' || current_character == '\n')
+			dictionary->words++;
+
+		dictionary->characters++;
+	}
+
+	lseek(file, 0, SEEK_SET);
+	return 1;
 }
 
 void dictionary_close(struct dictionary *dictionary)
