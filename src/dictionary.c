@@ -29,7 +29,7 @@ struct dictionary *dictionary_load(const char *file_name)
 	memset(*(dictionary->data), '\0', dictionary->characters);
 
 	while (read(file, &current_character, 1)) {
-		if (current_character == '\n') {
+		if (current_character == '\n' || current_character == ' ') {
 			dictionary->data[word_index][character_index] = '\0';
 
 			dictionary->data[word_index + 1] = &dictionary->data[word_index][character_index + 1];
