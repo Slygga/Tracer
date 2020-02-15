@@ -20,15 +20,14 @@ int main(int argc, char **argv)
 
 		sprintf(
 			results,
-			"Start Time: %d\nEnd Time: %d\nSeconds: %d\nWords: %d\nWPM: %f\nLength: %d\nCorrect Characters: %d\nIncorrect Characters: %d\n",
-			race->start_time,
-			race->end_time,
+			"Seconds: %d\nWords: %d\nWPM: %f\nLength: %d\nCorrect Characters: %d\nIncorrect Characters: %d\nAccuracy: %f%%\n",
 			race->end_time - race->start_time,
 			race->words,
 			(float)race->words / (race->end_time - race->start_time) * 60.0,
 			race->length,
 			race->correct_characters,
-			race->incorrect_characters
+			race->incorrect_characters,
+			(float)race->correct_characters / (race->correct_characters + race->incorrect_characters) * 100
 		);
 
 		erase();
@@ -73,8 +72,7 @@ struct race *race_generate(struct dictionary *dictionary, int length)
 	race->correct_characters = 0;
 	race->incorrect_characters = 0;
 
-	time_t t;
-	srand(time(&t));
+	srand(time(NULL));
 
 	attron(COLOR_PAIR(INACTIVE_COLOR));
 
@@ -96,7 +94,7 @@ struct race *race_generate(struct dictionary *dictionary, int length)
 
 		addstr(dictionary->data[random_position]);
 
-		srand(time(&t) * rand());
+		srand(time(NULL) * rand());
 	}
 
 	attroff(COLOR_PAIR(INACTIVE_COLOR));
@@ -110,11 +108,10 @@ struct race *race_generate(struct dictionary *dictionary, int length)
 void race_start(struct race *race)
 {
 	int input, expected, x, y, max_x, max_y;
-	time_t start, end;
 
 	getmaxyx(stdscr, max_y, max_x);
 
-	time(&start);
+	race->start_time = time(NULL);
 
 	while ((input = getch()) != 27) { // Escape key
 		getyx(stdscr, y, x);
@@ -134,10 +131,7 @@ void race_start(struct race *race)
 		move(y, x);
 	}
 
-	time(&end);
-
-	race->start_time = start;
-	race->end_time = end;
+	race->end_time = time(NULL);
 }
 
 void race_input_handle(int *y, int *x, struct race *race, int input, int expected)
